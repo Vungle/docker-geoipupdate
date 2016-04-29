@@ -1,0 +1,40 @@
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: geoipupdate
+spec:
+  selector:
+    matchLabels:
+      daemon: geoipupdate
+  template:
+    metadata:
+      labels:
+        daemon: geoipupdate
+      name: geoipupdate
+    spec:
+      containers:
+        - name: geoipupdate
+          image: vungle/geoipupdate
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: geodata
+              mountPath: /geodata
+            - name: conf
+              mountPath: /etc/conf
+          resources:
+            limits:
+              cpu: 100m
+              memory: 200Mi
+
+      volumes:
+        - name: conf
+          secret:
+            secretName: maxmind
+        - name: geodata
+          hostPath: 
+            path: /var/lib/docker/maxmind/geodata
+      
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+        - name: vungleregistrykey
