@@ -1,5 +1,8 @@
 # Tag: vungle/geoipupdate
-FROM garukun/geoipupdate
+FROM garukun/geoipupdate:v0.1.0
 MAINTAINER Steve Jiang <steve.jiang@vungle.com>
 
-ENTRYPOINT ["/bin/bash", "-c", "while true; do update.sh /etc/conf/maxmind.conf; echo 'Sleeping for a day...'; sleep 86400; done"]
+COPY files/checkup /usr/local/bin/checkup
+COPY files/livecheck /usr/local/bin/livecheck
+
+ENTRYPOINT ["checkup", "/etc/conf/maxmind.conf"]

@@ -1,0 +1,6 @@
+#!/bin/bash
+while true; do
+  update.sh $1;
+  echo 'Sleeping for a day...';
+  sleep 86400;
+done
