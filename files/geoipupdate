@@ -4,7 +4,10 @@ destination=$2
 
 while true; do
   echo 'Updating...'
-  set -ex && aws s3 cp ${s3_dropzone} ${destination};
+  # Download to interim location first to avoid immature read of the final file.
+  mkdir -p /tmp/maxmind
+  set -ex && aws s3 cp ${s3_dropzone} /tmp/maxmind/interim;
+  mv /tmp/maxmind/interim ${destination}
   set +ex;
 
   echo 'Sleeping for a day...';
