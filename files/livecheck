@@ -1,5 +1,0 @@
-#!/bin/bash
-if [ -z "$(ls -A /geodata)" ]; then
-  echo "Geo data missing!"
-  exit 1
-fi

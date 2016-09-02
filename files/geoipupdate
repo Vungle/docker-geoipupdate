@@ -1,0 +1,12 @@
+#!/bin/sh
+s3_dropzone=$1
+destination=$2
+
+while true; do
+  echo 'Updating...'
+  set -ex && aws s3 cp ${s3_dropzone} ${destination};
+  set +ex;
+
+  echo 'Sleeping for a day...';
+  sleep 86400;
+done

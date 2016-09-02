@@ -1,5 +1,9 @@
 # Maxmind Geo IP update Docker image
 
+The GeoIPUpdate container is designed to be run within a Kubernetes pod with the
+pod's lifecycle in mind. The container will exit after downloading the GeoIP
+files except after a period of waiting. The pod's lifecycle can then restart the container for the next update.
+
 The container can be run as a daemon; to run the container as a DaemonSet in
 Kubernetes, make sure the required volumes exists on in Kubernetes cluster and
 run:

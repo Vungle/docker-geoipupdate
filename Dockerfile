@@ -1,8 +1,7 @@
 # Tag: vungle/geoipupdate
-FROM garukun/geoipupdate:v0.1.0
+FROM vungle/awscli
 MAINTAINER Steve Jiang <steve.jiang@vungle.com>
 
-COPY files/checkup /usr/local/bin/checkup
-COPY files/livecheck /usr/local/bin/livecheck
+COPY files/geoipupdate /usr/local/bin/geoipupdate
 
-ENTRYPOINT ["checkup", "/etc/conf/maxmind.conf"]
+ENTRYPOINT ["geoipupdate"]
