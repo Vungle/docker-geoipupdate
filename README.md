@@ -1,3 +1,7 @@
+# v0.3.3
+
+Using awscli Docker image 1.17 that does not declare environment variables for AWS access keys in order to avoid any conflict with the service account annotation when assuming IAM role. AWS access keys env variables are declared within the application's helm chart.
+
 # Maxmind Geo IP update Docker image
 
 The GeoIPUpdate container is designed to be run within a Kubernetes pod with the

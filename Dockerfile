@@ -1,6 +1,5 @@
 # Tag: vungle/geoipupdate
-FROM vungle/awscli
-MAINTAINER Steve Jiang <steve.jiang@vungle.com>
+FROM vungle/awscli:1.17
 
 COPY files/geoipupdate /usr/local/bin/geoipupdate
 
