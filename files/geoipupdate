@@ -1,13 +1,15 @@
 #!/bin/sh
 s3_dropzone=$1
 destination=$2
+cityName=$3
+anonymousName=$4
 
 while true; do
   echo 'Updating...'
   # Download to interim location first to avoid immature read of the final file.
   mkdir -p /tmp/maxmind
-  set -ex && aws s3 cp ${s3_dropzone} /tmp/maxmind/interim;
-  mv /tmp/maxmind/interim ${destination}
+  set -ex && aws s3 cp ${s3_dropzone} /tmp/maxmind/ --recursive --exclude "*" --include ${cityName} --include ${anonymousName};
+  mv /tmp/maxmind/* ${destination}
   set +ex;
 
   echo 'Sleeping for a day...';
