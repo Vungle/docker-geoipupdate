@@ -1,12 +1,13 @@
 #!/bin/sh
-s3_dropzone=$1
-destination=$2
+bucket=$1
+key=$2
+destination=$3
 
 while true; do
   echo 'Updating...'
   # Download to interim location first to avoid immature read of the final file.
   mkdir -p /tmp/maxmind
-  set -ex && aws s3 cp ${s3_dropzone} /tmp/maxmind/interim;
+  set -ex && aws s3api get-object --bucket ${bucket} --key ${key} /tmp/maxmind/interim;
   mv /tmp/maxmind/interim ${destination}
   set +ex;
 
