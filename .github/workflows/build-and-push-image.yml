@@ -49,12 +49,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: set extra tags
+
+      - name: Set extra tags
         id: set-extra-tags
         if: inputs.extra_tags != ''
         run: |
           EXTRA_TAGS=""
-          IFS=',' read -ra TAG_ARR <<< "${{ inputs.extra_tags }}"
+          IFS=',' read -ra TAG_ARR <<< "extra1,extra2"
           for tag in "${TAG_ARR[@]}"; do
             if [[ -n "$TAGS" ]]; then
               TAGS="$TAGS,"
@@ -94,23 +95,23 @@ jobs:
           build-args: |
             BUILDKIT_INLINE_CACHE=1
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.REPOSITORY }}:${{inputs.image_tag}}${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.REPOSITORY }}:latest${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.title=${{env.REPOSITORY}}
-            org.opencontainers.image.version=${{inputs.image_tag}}
+            org.opencontainers.image.version=latest
             org.opencontainers.image.vendor=Liftoff
             org.opencontainers.image.description=GeoIP update client for DMX
             org.opencontainers.image.authors=${{ github.actor }}
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
       - name: Append image summary
         run: |
-          echo "- 🐳 Image for \`${{env.REPOSITORY}}\` published with tag \`${{ inputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "  - GHCR: \`${{env.REGISTRY}}/${{github.repository_owner}}/${{ env.REPOSITORY }}:${{ inputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐳 Image for \`${{env.REPOSITORY}}\` published with tag \`latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "  - GHCR: \`${{env.REGISTRY}}/${{github.repository_owner}}/${{ env.REPOSITORY }}:latest\`" >> $GITHUB_STEP_SUMMARY
       - name: Verify Image Push
         run: |
-          IFS=',' read -ra TAG_ARR <<< "${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.REPOSITORY }}:${{inputs.image_tag}}${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}"
+          IFS=',' read -ra TAG_ARR <<< "${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.REPOSITORY }}:latest${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}"
           for tag in "${TAG_ARR[@]}"; do
             echo "Verifying image: $tag"
             docker manifest inspect $tag || echo "Image verification failed"
