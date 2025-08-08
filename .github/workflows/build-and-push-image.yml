@@ -78,7 +78,7 @@ jobs:
           output-file: /tmp/hadolint-report.txt
       - name: Lint Dockerfile and write to summary
         run: |
-          echo '### 🧼 Hadolint Results' >> $GITHUB_STEP_SUMMARY
+          echo '## 🧼 Hadolint Results' >> $GITHUB_STEP_SUMMARY
           if [[ -s /tmp/hadolint-report.txt ]]; then
             cat /tmp/hadolint-report.txt >> $GITHUB_STEP_SUMMARY
           else
@@ -113,8 +113,17 @@ jobs:
           echo "  - GHCR: \`${{env.REGISTRY}}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:latest\`" >> $GITHUB_STEP_SUMMARY
       - name: Verify Image Push
         run: |
+          echo "## 🛂 Image Verification" >> $GITHUB_STEP_SUMMARY
           IFS=',' read -ra TAG_ARR <<< "${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:latest${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}"
           for tag in "${TAG_ARR[@]}"; do
             echo "Verifying image: $tag"
-            docker manifest inspect $tag || echo "Image verification failed"
+            echo "- Verifying image: \`$tag\`" >> $GITHUB_STEP_SUMMARY
+            if docker manifest inspect "$tag" > /dev/null 2>&1; then
+              echo "✅ Image found: $tag"
+              echo "  - ✅ Image found" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ Image verification failed for: $tag"
+              echo "  - ❌ Image verification failed" >> $GITHUB_STEP_SUMMARY
+            fi
           done
+        shell: bash
