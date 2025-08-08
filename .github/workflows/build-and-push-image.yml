@@ -109,8 +109,11 @@ jobs:
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
       - name: Append image summary
         run: |
-          echo "- 🐳 Image for \`${{env.REPOSITORY}}\` published with tag \`latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "  - GHCR: \`${{env.REGISTRY}}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐳 Image Summary" >> $GITHUB_STEP_SUMMARY
+          IFS=',' read -ra TAG_ARR <<< "latest,extra1,extra2"
+          for tag in "${TAG_ARR[@]}"; do
+            echo "- GHCR: \`${{env.REGISTRY}}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:$tag\`" >> $GITHUB_STEP_SUMMARY
+          done
       - name: Verify Image Push for Multi-Arch
         run: |
           echo "## 🛂 Image Architecture Verification" >> $GITHUB_STEP_SUMMARY
