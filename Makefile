@@ -60,3 +60,12 @@ validate-build:
 # Build with validation
 code-build-multi-arch: validate-build
 	@echo "[code-build-multi-arch] Build validation passed"
+
+# Show local images
+show-images:
+	@echo "[show-images] Local Docker images:"
+	docker images | grep geoipupdate || echo "No geoipupdate images found locally"
+	@echo "[show-images] GHCR images:"
+	docker images | grep ghcr.io/vungle/geoipupdate || echo "No GHCR geoipupdate images found locally"
+	@echo "[show-images] Buildx cache:"
+	docker buildx du
