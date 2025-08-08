@@ -64,7 +64,6 @@ jobs:
             TAGS="${TAGS} ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:$tag"
           done
           echo "EXTRA_TAGS=,$TAGS" >> $GITHUB_OUTPUT
-
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
