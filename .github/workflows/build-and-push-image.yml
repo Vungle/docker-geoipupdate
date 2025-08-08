@@ -1,0 +1,53 @@
+name: Build and Push Images
+run-name: ${{inputs.image_tag}} - ${{inputs.git_ref}} - ${{github.actor}}
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Tag for both amd64 and multi-arch. For example, 2.8.7, 2.8.7-beta.
+        type: string
+        required: true
+      git_ref:
+        description: The commit/branch/tag we build for. Keep empty to use default branch.
+        type: string
+
+permissions:
+  id-token: write
+  contents: write
+  # https://stackoverflow.com/questions/72248956/github-action-with-docker-makes-error-exporting-to-image-403-forbidden-error
+  packages: write
+  pull-requests: read
+env:
+  HELM_EXPERIMENTAL_OCI: 1
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    name: Build and Publish Multi-Arch Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Repository Code
+        uses: actions/checkout@v4  # https://github.com/actions/checkout
+        with:
+          ref: ${{inputs.git_ref}}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Setup ssh Agent
+        run: |
+          eval `ssh-agent -s`
+          ssh-add - <<< '${{ secrets.VSL_DOWNLOAD_SSH_KEY }}'
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and Push geoipupdate Multi-Arch Images
+        run: |
+          BUILD_SCOPE='${{inputs.image_tag}}'
+          if [ -z ${{inputs.image_tag}} ]; then BUILD_SCOPE='latest'; fi
+          make image-build-and-push-multi-arch BUILD_SCOPE="$BUILD_SCOPE"
