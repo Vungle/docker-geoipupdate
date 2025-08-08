@@ -116,14 +116,19 @@ jobs:
           echo "## 🛂 Image Verification" >> $GITHUB_STEP_SUMMARY
           IFS=',' read -ra TAG_ARR <<< "${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:latest${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}"
           for tag in "${TAG_ARR[@]}"; do
-            echo "Verifying image: $tag"
-            echo "- Verifying image: \`$tag\`" >> $GITHUB_STEP_SUMMARY
-            if docker manifest inspect "$tag" > /dev/null 2>&1; then
-              echo "✅ Image found: $tag"
-              echo "  - ✅ Image found" >> $GITHUB_STEP_SUMMARY
+            echo "🔍 Inspecting image: $tag"
+            echo "- 🔍 Inspecting image: \`$tag\`" >> $GITHUB_STEP_SUMMARY
+
+            ARCHES=$(docker buildx imagetools inspect "$tag" --format '{{ range .Manifest.Manifests }}{{ .Platform.architecture }} {{ end }}')
+            echo "Architectures found: $ARCHES"
+            echo "  - Architectures: \`$ARCHES\`" >> $GITHUB_STEP_SUMMARY
+
+            if [[ "$ARCHES" == *"amd64"* && "$ARCHES" == *"arm64"* ]]; then
+              echo "✅ Both amd64 and arm64 found"
+              echo "  - ✅ Verified: amd64 & arm64 present" >> $GITHUB_STEP_SUMMARY
             else
-              echo "❌ Image verification failed for: $tag"
-              echo "  - ❌ Image verification failed" >> $GITHUB_STEP_SUMMARY
+              echo "❌ Missing expected architectures"
+              echo "  - ❌ One or more architectures missing" >> $GITHUB_STEP_SUMMARY
             fi
           done
         shell: bash
