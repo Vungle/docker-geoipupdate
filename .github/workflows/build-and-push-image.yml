@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: Tag for both amd64 and multi-arch. For example, 2.8.7, 2.8.7-beta.
+        description: Tag for both amd64 and multi-arch. For example, 2.8.8.
         type: string
         required: true
         default: latest
@@ -13,7 +13,7 @@ on:
         description: The commit/branch/tag we build for. Keep empty to use default branch.
         type: string
       extra_tags:
-        description: Extra tags to push, comma-separated. For example, qa, beta.
+        description: Extra tags to push, comma-separated. For example, "2.8.8-qa, 2.8.8-beta".
         type: string
         default: ''
 
