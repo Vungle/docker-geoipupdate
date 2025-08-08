@@ -111,24 +111,31 @@ jobs:
         run: |
           echo "- 🐳 Image for \`${{env.REPOSITORY}}\` published with tag \`latest\`" >> $GITHUB_STEP_SUMMARY
           echo "  - GHCR: \`${{env.REGISTRY}}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:latest\`" >> $GITHUB_STEP_SUMMARY
-      - name: Verify Image Push
+      - name: Verify Image Push for Multi-Arch
         run: |
-          echo "## 🛂 Image Verification" >> $GITHUB_STEP_SUMMARY
+          echo "## 🛂 Image Architecture Verification" >> $GITHUB_STEP_SUMMARY
           IFS=',' read -ra TAG_ARR <<< "${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:latest${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}"
           for tag in "${TAG_ARR[@]}"; do
-            echo "🔍 Inspecting image: $tag"
+            echo "Verifying image: $tag"
             echo "- 🔍 Inspecting image: \`$tag\`" >> $GITHUB_STEP_SUMMARY
-
-            ARCHES=$(docker buildx imagetools inspect "$tag" --format '{{ range .Manifest.Manifests }}{{ .Platform.architecture }} {{ end }}')
-            echo "Architectures found: $ARCHES"
-            echo "  - Architectures: \`$ARCHES\`" >> $GITHUB_STEP_SUMMARY
-
-            if [[ "$ARCHES" == *"amd64"* && "$ARCHES" == *"arm64"* ]]; then
-              echo "✅ Both amd64 and arm64 found"
+            manifest_json=$(docker manifest inspect "$tag" 2>/dev/null)
+            if [[ -z "$manifest_json" ]]; then
+              echo "❌ Failed to inspect manifest for $tag"
+              echo "  - ❌ Manifest not found" >> $GITHUB_STEP_SUMMARY
+              continue
+            fi
+            echo "$manifest_json" | jq -r '.manifests[].platform.architecture' > /tmp/arches.txt
+            echo "  - Architectures:" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/arches.txt | while read arch; do
+              echo "    - $arch"
+              echo "    - \`$arch\`" >> $GITHUB_STEP_SUMMARY
+            done
+            if grep -q "amd64" /tmp/arches.txt && grep -q "arm64" /tmp/arches.txt; then
+              echo "✅ Both amd64 and arm64 present"
               echo "  - ✅ Verified: amd64 & arm64 present" >> $GITHUB_STEP_SUMMARY
             else
               echo "❌ Missing expected architectures"
-              echo "  - ❌ One or more architectures missing" >> $GITHUB_STEP_SUMMARY
+              echo "  - ❌ Missing one or more expected architectures" >> $GITHUB_STEP_SUMMARY
             fi
           done
         shell: bash
