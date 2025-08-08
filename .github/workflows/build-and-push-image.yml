@@ -58,17 +58,13 @@ jobs:
           echo "Starting Set extra tags step"
           EXTRA_TAGS=""
           IFS=',' read -ra TAG_ARR <<< "${{ inputs.extra_tags }}"
-          echo "Debug: TAG_ARR length: ${#TAG_ARR[@]}"
           for tag in "${TAG_ARR[@]}"; do
-            echo "Debug: Processing tag: '$tag'"
             if [[ -n "$TAGS" ]]; then
               TAGS="$TAGS,"
             fi
             TAGS="${TAGS} ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:$tag"
           done
-          echo "Debug: Final TAGS: '$TAGS'"
           echo "EXTRA_TAGS=,$TAGS" >> $GITHUB_OUTPUT
-          echo "Debug: check [,$TAGS]"
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
@@ -113,7 +109,6 @@ jobs:
           echo "## 🐳 Image push Summary" >> $GITHUB_STEP_SUMMARY
           IFS=',' read -ra TAG_ARR <<< "${{inputs.image_tag}},${{ inputs.extra_tags }}"
           for tag in "${TAG_ARR[@]}"; do
-            echo "test Append image summary check:$tag"
             echo "- \`${{env.REGISTRY}}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:$tag\`" >> $GITHUB_STEP_SUMMARY
           done
       - name: Verify Image Push for Multi-Arch
@@ -121,7 +116,8 @@ jobs:
           echo "## 🛂 Image Architecture Verification" >> $GITHUB_STEP_SUMMARY
           IFS=',' read -ra TAG_ARR <<< "${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:${{inputs.image_tag}}${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}"
           for tag in "${TAG_ARR[@]}"; do
-            echo "Verifying image: $tag"
+            tag=$(echo "$tag" | xargs)
+            echo "Verifying image: \`$tag\`"
             echo "- 🔍 Inspecting image: \`$tag\`" >> $GITHUB_STEP_SUMMARY
             manifest_json=$(docker manifest inspect "$tag" 2>/dev/null)
             if [[ -z "$manifest_json" ]]; then
