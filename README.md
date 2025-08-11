@@ -19,6 +19,6 @@ container. The configuration file should have the following format:
     LicenseKey your_key
     ProductIds GeoIP2-Country GeoIP2-City 106 132 <other> <other>
 
-## Build image 
+## Build Image 
 
 `Makefile` is not required in CI building but can be used to build image locally. 
