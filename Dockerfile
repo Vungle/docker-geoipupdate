@@ -1,6 +1,6 @@
 # Tag: vungle/geoipupdate
 FROM vungle/awscli
-LABEL maintainer="Steve Jiang <steve.jiang@vungle.com>"
+LABEL maintainer="Platform Supply <platform-ssp@liftoff.io>"
 
 COPY files/geoipupdate /usr/local/bin/geoipupdate
 
