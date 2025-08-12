@@ -1,0 +1,142 @@
+name: Build and Push Images
+run-name: ${{inputs.image_tag}} - ${{inputs.git_ref}} - ${{github.actor}}
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Tag for both amd64 and multi-arch. For example, 2.8.8.
+        type: string
+        required: true
+        default: latest
+      git_ref:
+        description: The commit/branch/tag we build for. Keep empty to use default branch.
+        type: string
+      extra_tags:
+        description: Extra tags to push, comma-separated. For example, "2.8.8-qa, 2.8.8-beta".
+        type: string
+        default: ''
+
+permissions:
+  id-token: write
+  contents: write
+  # https://stackoverflow.com/questions/72248956/github-action-with-docker-makes-error-exporting-to-image-403-forbidden-error
+  packages: write
+  pull-requests: read
+
+env:
+  HELM_EXPERIMENTAL_OCI: 1
+  REGISTRY: ghcr.io  # For GitHub Container Registry
+  REPOSITORY: geoipupdate  # Image repository name in the registry
+jobs:
+  build-and-push:
+    name: Build and Publish Multi-Arch Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Repository Code
+        uses: actions/checkout@v4  # https://github.com/actions/checkout
+        with:
+          ref: ${{inputs.git_ref}}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create metadata
+        id: meta
+        run: | 
+          echo "created=$(date --rfc-3339=seconds)" >> $GITHUB_OUTPUT
+          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Set extra tags
+        id: set-extra-tags
+        if: inputs.extra_tags != ''
+        run: |
+          echo "Starting Set extra tags step"
+          EXTRA_TAGS=""
+          IFS=',' read -ra TAG_ARR <<< "${{ inputs.extra_tags }}"
+          for tag in "${TAG_ARR[@]}"; do
+            if [[ -n "$TAGS" ]]; then
+              TAGS="$TAGS,"
+            fi
+            TAGS="${TAGS} ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:$tag"
+          done
+          echo "EXTRA_TAGS=,$TAGS" >> $GITHUB_OUTPUT
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ./Dockerfile
+          verbose: true
+          failure-threshold: ignore
+          no-fail: true
+          output-file: /tmp/hadolint-report.txt
+      - name: Lint Dockerfile and write to summary
+        run: |
+          echo '## 🧼 Hadolint Results' >> $GITHUB_STEP_SUMMARY
+          if [[ -s /tmp/hadolint-report.txt ]]; then
+            cat /tmp/hadolint-report.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No issues found." >> $GITHUB_STEP_SUMMARY
+          fi
+        shell: bash
+      - name: Build and publish images
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:${{inputs.image_tag}}${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}
+          labels: |
+            org.opencontainers.image.source=${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=${{env.REPOSITORY}}
+            org.opencontainers.image.version=${{inputs.image_tag}}
+            org.opencontainers.image.vendor=Liftoff
+            org.opencontainers.image.description=GeoIP update client for DMX
+            org.opencontainers.image.authors=${{ github.actor }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+      - name: Append image summary
+        run: |
+          echo "## 🐳 Image push Summary" >> $GITHUB_STEP_SUMMARY
+          IFS=',' read -ra TAG_ARR <<< "${{inputs.image_tag}},${{ inputs.extra_tags }}"
+          for tag in "${TAG_ARR[@]}"; do
+            echo "- \`${{env.REGISTRY}}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:$tag\`" >> $GITHUB_STEP_SUMMARY
+          done
+      - name: Verify Image Push for Multi-Arch
+        run: |
+          echo "## 🛂 Image Architecture Verification" >> $GITHUB_STEP_SUMMARY
+          IFS=',' read -ra TAG_ARR <<< "${{ env.REGISTRY }}/${{ steps.meta.outputs.owner }}/${{ env.REPOSITORY }}:${{inputs.image_tag}}${{ steps.set-extra-tags.outputs.EXTRA_TAGS }}"
+          for tag in "${TAG_ARR[@]}"; do
+            tag=$(echo "$tag" | xargs)
+            echo "Verifying image: \`$tag\`"
+            echo "- 🔍 Inspecting image: \`$tag\`" >> $GITHUB_STEP_SUMMARY
+            manifest_json=$(docker manifest inspect "$tag" 2>/dev/null)
+            if [[ -z "$manifest_json" ]]; then
+              echo "❌ Failed to inspect manifest for $tag"
+              echo "  - ❌ Manifest not found" >> $GITHUB_STEP_SUMMARY
+              continue
+            fi
+            echo "$manifest_json" | jq -r '.manifests[].platform.architecture' > /tmp/arches.txt
+            echo "  - Architectures:" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/arches.txt | while read arch; do
+              echo "    - $arch"
+              echo "    - \`$arch\`" >> $GITHUB_STEP_SUMMARY
+            done
+            if grep -q "amd64" /tmp/arches.txt && grep -q "arm64" /tmp/arches.txt; then
+              echo "✅ Both amd64 and arm64 present"
+              echo "  - ✅ Verified: amd64 & arm64 present" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ Missing expected architectures"
+              echo "  - ❌ Missing one or more expected architectures" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+        shell: bash
