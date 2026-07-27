@@ -5,10 +5,12 @@ destination=$3
 
 while true; do
   echo 'Updating...'
-  # Download to interim location first to avoid immature read of the final file.
-  mkdir -p /tmp/maxmind
-  set -ex && aws s3api get-object --bucket ${bucket} --key ${key} /tmp/maxmind/interim;
-  mv /tmp/maxmind/interim ${destination}
+  # Download to an interim file on the same filesystem as the destination so the
+  # mv below is an atomic rename(2) and readers never observe a partial file.
+  # An interim file on another filesystem (e.g. /tmp) would make mv fall back to
+  # a non-atomic copy, exposing a truncated DB to containers sharing the volume.
+  set -ex && aws s3api get-object --bucket ${bucket} --key ${key} ${destination}.interim;
+  mv ${destination}.interim ${destination}
   set +ex;
 
   echo 'Sleeping for a day...';
